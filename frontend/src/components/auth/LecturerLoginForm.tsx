@@ -15,9 +15,10 @@ export const LecturerLoginForm = ({ onSuccess }: { onSuccess: () => void }) => {
     resolver: zodResolver(lecturerLoginSchema),
   });
 
-  const onSubmit = (data: LecturerLoginData) => {
+  const onSubmit = async (data: LecturerLoginData) => {
     setError("");
-    if (loginLecturer(data.staffNumber, data.password)) {
+    const success = await loginLecturer(data.staffNumber, data.password);
+    if (success) {
       onSuccess();
     } else {
       setError("Invalid staff number or password");

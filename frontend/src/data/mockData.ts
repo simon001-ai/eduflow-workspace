@@ -1,7 +1,7 @@
 // ============ TYPES ============
 export interface Student {
   id: string;
-  fullName: string;
+  fullname: string;
   admissionNumber: string;
   email: string;
   password: string;
@@ -10,7 +10,7 @@ export interface Student {
 
 export interface Lecturer {
   id: string;
-  fullName: string;
+  full_name: string;
   email: string;
   staffNumber: string;
   password: string;
@@ -107,7 +107,7 @@ export interface Notification {
 export const mockStudents: Student[] = [
   {
     id: "s1",
-    fullName: "James Mwangi",
+    fullname: "James Mwangi",
     admissionNumber: "SCT221-0001/2022",
     email: "james.mwangi@student.edu",
     password: "student123",
@@ -115,7 +115,7 @@ export const mockStudents: Student[] = [
   },
   {
     id: "s2",
-    fullName: "Grace Wanjiku",
+    fullname: "Grace Wanjiku",
     admissionNumber: "SCT221-0002/2022",
     email: "grace.wanjiku@student.edu",
     password: "student123",
@@ -126,7 +126,7 @@ export const mockStudents: Student[] = [
 export const mockLecturers: Lecturer[] = [
   {
     id: "l1",
-    fullName: "Dr. Peter Odhiambo",
+    full_name: "Dr. Peter Odhiambo",
     email: "p.odhiambo@university.ac.ke",
     staffNumber: "STF-001",
     password: "lecturer123",
@@ -134,7 +134,7 @@ export const mockLecturers: Lecturer[] = [
   },
   {
     id: "l2",
-    fullName: "Prof. Sarah Kimani",
+    full_name: "Prof. Sarah Kimani",
     email: "s.kimani@university.ac.ke",
     staffNumber: "STF-002",
     password: "lecturer123",

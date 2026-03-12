@@ -11,13 +11,13 @@ import { LecturerStats } from "@/components/lecturer/dashboard/LecturerStats";
 import { TeachingUnitsList } from "@/components/lecturer/dashboard/TeachingUnitsList";
 import { UploadResources } from "@/components/lecturer/resources/UploadResources";
 import { SubmissionsByUnit } from "@/components/lecturer/submissions/SubmissionsByUnit";
-import { LecturerInboxLayout } from "@/components/lecturer/inbox/LecturerInboxLayout";
+import { LecturerChatLayout } from "@/components/lecturer/chat/LecturerChatLayout";
 
 const navItems = [
   { label: "Dashboard", icon: LayoutDashboard, path: "/lecturer" },
   { label: "Resources", icon: BookOpen, path: "/lecturer/resources" },
   { label: "Submissions", icon: FileText, path: "/lecturer/submissions" },
-  { label: "Inbox", icon: Mail, path: "/lecturer/inbox" },
+  { label: "Chat", icon: Mail, path: "/lecturer/chat" },
 ];
 
 const LecturerDashboard = () => {
@@ -26,7 +26,7 @@ const LecturerDashboard = () => {
   return (
     <div className="space-y-6 animate-fade-in">
       <div>
-        <h1 className="text-2xl font-bold">Welcome, <span className="text-primary">{lecturer.fullName.split(" ").pop()}</span> 👋</h1>
+        <h1 className="text-2xl font-bold">Welcome, <span className="text-primary">{lecturer.full_name.split(" ").pop()}</span> 👋</h1>
         <p className="text-sm text-muted-foreground mt-1">Here's an overview of your teaching activities.</p>
       </div>
       <LecturerStats />
@@ -39,7 +39,9 @@ const LecturerResourcesList = () => {
   const { lecturer } = useAuth();
   const navigate = useNavigate();
   if (!lecturer) return null;
-  const units = mockUnits.filter((u) => lecturer.teachingUnits.includes(u.id));
+  const units = mockUnits.filter((u) =>
+    Array.isArray(lecturer.teachingUnits) && lecturer.teachingUnits.includes(u.id)
+  );
   return (
     <div className="space-y-4 animate-fade-in">
       <h1 className="text-xl font-bold flex items-center gap-2"><BookOpen className="h-5 w-5 text-primary" /> My Resources</h1>
@@ -63,7 +65,9 @@ export const LecturerLayout = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   if (!lecturer) return null;
-  const initials = lecturer.fullName.split(" ").map((n) => n[0]).join("").slice(0, 2);
+ const initials = lecturer && lecturer.full_name
+  ? lecturer.full_name.split(" ").map((n) => n[0]).join("").slice(0, 2)
+  : "";
 
   return (
     <div className="min-h-screen bg-background">
@@ -75,7 +79,7 @@ export const LecturerLayout = () => {
             </button>
             <div className="flex items-center gap-2 cursor-pointer" onClick={() => navigate("/lecturer")}>
               <GraduationCap className="h-6 w-6 text-accent" />
-              <span className="font-bold text-sm hidden sm:inline">EduFlow Connect</span>
+              <span className="font-bold text-sm hidden sm:inline">EduFlow Workspace</span>
             </div>
           </div>
           <nav className="hidden lg:flex items-center gap-1">
@@ -92,7 +96,7 @@ export const LecturerLayout = () => {
                 <Avatar className="h-7 w-7">
                   <AvatarFallback className="bg-accent text-accent-foreground text-[10px] font-bold">{initials}</AvatarFallback>
                 </Avatar>
-                <span className="hidden sm:inline text-xs">{lecturer.fullName}</span>
+                <span className="hidden sm:inline text-xs">{lecturer.full_name}</span>
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
@@ -119,10 +123,11 @@ export const LecturerLayout = () => {
       <main className="container mx-auto px-4 py-6 max-w-5xl">
         <Routes>
           <Route index element={<LecturerDashboard />} />
+          <Route path="dashboard" element={<LecturerDashboard />} />
           <Route path="resources" element={<LecturerResourcesList />} />
           <Route path="resources/:unitId" element={<UploadResources />} />
           <Route path="submissions" element={<SubmissionsByUnit />} />
-          <Route path="inbox" element={<LecturerInboxLayout />} />
+          <Route path="chat" element={<LecturerChatLayout />} />
         </Routes>
       </main>
     </div>

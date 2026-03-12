@@ -2,8 +2,12 @@ import express from 'express';
 import cors from './config/cors.js';
 import routes from '../routes/index.js';
 import errorHandler from '../middleware/error.middleware.js';
+import path from 'path';
 
 const app = express();
+
+// Serve uploaded files statically
+app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
 
 app.use(cors);
 app.use(express.json());

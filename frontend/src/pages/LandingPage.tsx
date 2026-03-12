@@ -22,10 +22,10 @@ export const LandingPage = () => {
         <nav className="container mx-auto flex items-center justify-between py-4 px-4">
           <div className="flex items-center gap-2">
             <GraduationCap className="h-7 w-7" />
-            <span className="font-bold text-lg tracking-tight">EduFlow Connect</span>
+            <span className="font-bold text-lg tracking-tight">EduFlow Workspace</span>
           </div>
           <div className="flex gap-2">
-            <Button variant="ghost" className="text-white hover:bg-white/10" onClick={() => navigate("/auth/student")}>
+            <Button  className="bg-white/20 hover:bg-white/30 text-white border border-white/30"  onClick={() => navigate("/auth/student")}>
               Student Login
             </Button>
             <Button className="bg-white/20 hover:bg-white/30 text-white border border-white/30" onClick={() => navigate("/auth/lecturer")}>
@@ -41,14 +41,6 @@ export const LandingPage = () => {
           <p className="text-lg text-white/80 mb-8 max-w-xl mx-auto">
             A seamless platform connecting students and lecturers — manage units, submit assignments, analyze documents, and communicate securely.
           </p>
-          <div className="flex gap-3 justify-center flex-wrap">
-            <Button size="lg" className="bg-white text-primary hover:bg-white/90 font-semibold" onClick={() => navigate("/auth/student")}>
-              Get Started as Student <ArrowRight className="ml-2 h-4 w-4" />
-            </Button>
-            <Button size="lg" variant="outline" className="border-white/40 text-white hover:bg-white/10" onClick={() => navigate("/auth/lecturer")}>
-              Lecturer Portal
-            </Button>
-          </div>
         </div>
       </header>
 
@@ -77,11 +69,7 @@ export const LandingPage = () => {
       <section className="bg-muted/50 py-16">
         <div className="container mx-auto px-4 text-center">
           <h2 className="text-2xl font-bold mb-3">Ready to Transform Your Academic Experience?</h2>
-          <p className="text-muted-foreground mb-6">Join EduFlow Connect today and streamline your learning journey.</p>
-          <div className="flex gap-3 justify-center flex-wrap">
-            <Button onClick={() => navigate("/auth/student")}>Student Sign Up</Button>
-            <Button variant="outline" onClick={() => navigate("/auth/lecturer")}>Lecturer Sign Up</Button>
-          </div>
+          <p className="text-muted-foreground mb-6">Join EduFlow Workspace today and streamline your learning journey.</p>
         </div>
       </section>
 
@@ -90,7 +78,7 @@ export const LandingPage = () => {
         <div className="container mx-auto px-4 flex items-center justify-between text-xs text-muted-foreground">
           <div className="flex items-center gap-2">
             <GraduationCap className="h-4 w-4" />
-            <span>EduFlow Connect © 2025</span>
+            <span>EduFlow Workspace © 2025</span>
           </div>
           <p>Built for academic excellence</p>
         </div>

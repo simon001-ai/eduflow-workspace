@@ -15,9 +15,10 @@ export const StudentLoginForm = ({ onSuccess }: { onSuccess: () => void }) => {
     resolver: zodResolver(studentLoginSchema),
   });
 
-  const onSubmit = (data: StudentLoginData) => {
+  const onSubmit = async (data: StudentLoginData) => {
     setError("");
-    if (loginStudent(data.admissionNumber, data.password)) {
+    const success = await loginStudent(data.admissionNumber, data.password);
+    if (success) {
       onSuccess();
     } else {
       setError("Invalid admission number or password");

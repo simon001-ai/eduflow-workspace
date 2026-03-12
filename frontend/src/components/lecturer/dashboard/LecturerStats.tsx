@@ -1,5 +1,6 @@
+import React from "react";
 import { useAuth } from "@/context/AuthContext";
-import { mockUnits, mockSubmissions, mockNotes, mockStudents } from "@/data/mockData";
+// Removed mockData imports. Will fetch stats from backend.
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Users, FileText, Upload, BookOpen } from "lucide-react";
@@ -8,21 +9,36 @@ export const LecturerStats = () => {
   const { lecturer } = useAuth();
   if (!lecturer) return null;
 
-  const teachingUnits = mockUnits.filter((u) => lecturer.teachingUnits.includes(u.id));
-  const totalStudents = new Set(
-    mockStudents.filter((s) => s.registeredUnits.some((uid) => lecturer.teachingUnits.includes(uid))).map((s) => s.id)
-  ).size;
-  const newSubmissions = mockSubmissions.filter(
-    (s) => lecturer.teachingUnits.includes(s.unitId) && s.status === "submitted"
-  ).length;
-  const totalResources = mockNotes.filter((n) => lecturer.teachingUnits.includes(n.unitId)).length;
+  const [stats, setStats] = React.useState([
+    { icon: FileText, label: "New Submissions", value: 0, color: "text-warning" },
+    { icon: Users, label: "Total Students", value: 0, color: "text-primary" },
+    { icon: Upload, label: "Resources Uploaded", value: 0, color: "text-accent" },
+    { icon: BookOpen, label: "Units Teaching", value: 0, color: "text-info" },
+  ]);
 
-  const stats = [
-    { icon: FileText, label: "New Submissions", value: newSubmissions, color: "text-warning" },
-    { icon: Users, label: "Total Students", value: totalStudents, color: "text-primary" },
-    { icon: Upload, label: "Resources Uploaded", value: totalResources, color: "text-accent" },
-    { icon: BookOpen, label: "Units Teaching", value: teachingUnits.length, color: "text-info" },
-  ];
+  React.useEffect(() => {
+    if (!lecturer) return;
+    const token = localStorage.getItem("token");
+    fetch("http://localhost:3000/api/lecturers/dashboard", {
+      headers: {
+        ...(token ? { Authorization: `Bearer ${token}` } : {})
+      }
+    })
+      .then(res => res.json())
+      .then(result => {
+        console.log("[LecturerStats] Dashboard response:", result);
+        // Backend returns top-level fields
+        if (typeof result.newSubmissionsCount === "number") {
+          setStats([
+            { icon: FileText, label: "New Submissions", value: result.newSubmissionsCount, color: "text-warning" },
+            { icon: Users, label: "Total Students", value: result.totalStudentsCount || 0, color: "text-primary" },
+            { icon: Upload, label: "Resources Uploaded", value: result.resourceCount || 0, color: "text-accent" },
+            { icon: BookOpen, label: "Units Teaching", value: result.unitsTeachingCount || 0, color: "text-info" },
+          ]);
+        }
+      })
+      .catch(err => console.error("[LecturerStats] Error fetching dashboard:", err));
+  }, [lecturer]);
 
   return (
     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">

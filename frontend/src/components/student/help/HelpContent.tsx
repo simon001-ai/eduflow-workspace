@@ -17,7 +17,7 @@ export const HelpContent = () => (
       <h1 className="text-xl font-bold flex items-center gap-2">
         <HelpCircle className="h-5 w-5 text-primary" /> Help Center
       </h1>
-      <p className="text-sm text-muted-foreground mt-1">Everything you need to know about using EduFlow Connect.</p>
+      <p className="text-sm text-muted-foreground mt-1">Everything you need to know about using EduFlow Workspace.</p>
     </div>
 
     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">

@@ -1,7 +1,19 @@
+import React from "react";
 import { useState } from "react";
 import { useAuth } from "@/context/AuthContext";
-import { mockEmails, mockLecturers, Email } from "@/data/mockData";
+// Removed mockData imports. Will fetch from backend.
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+
+interface Email {
+  id: string;
+  subject: string;
+  body: string;
+  fromName: string;
+  toName?: string;
+  sentAt: string;
+  read: boolean;
+  isSpam?: boolean;
+}
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -12,6 +24,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Inbox, Send, AlertTriangle, ArrowLeft, Mail, Paperclip, Shield, ExternalLink } from "lucide-react";
 import { scanEmailForThreats } from "@/utils/linkScanner";
 import { toast } from "@/hooks/use-toast";
+import { sendInboxEmail } from "@/lib/inboxApi";
 
 export const InboxLayout = () => {
   const { student } = useAuth();
@@ -22,10 +35,56 @@ export const InboxLayout = () => {
   const [composeTo, setComposeTo] = useState("");
   const [composeSubject, setComposeSubject] = useState("");
   const [composeBody, setComposeBody] = useState("");
+  const [attachment, setAttachment] = useState<File | null>(null);
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
 
-  const inboxEmails = mockEmails.filter((e) => e.to === userId && !e.isSpam);
-  const sentEmails = mockEmails.filter((e) => e.from === userId);
-  const spamEmails = mockEmails.filter((e) => e.to === userId && e.isSpam);
+  const [inboxEmails, setInboxEmails] = useState<any[]>([]);
+  const [sentEmails, setSentEmails] = useState<any[]>([]);
+  const [spamEmails, setSpamEmails] = useState<any[]>([]);
+  const [lecturers, setLecturers] = useState<any[]>([]);
+
+  React.useEffect(() => {
+    if (!userId) return;
+    const token = localStorage.getItem("token");
+    // Fetch inbox
+    fetch(`http://localhost:3000/api/inbox/`, {
+      headers: {
+        ...(token ? { Authorization: `Bearer ${token}` } : {})
+      }
+    })
+      .then(res => res.ok ? res.json() : Promise.reject(res))
+      .then(result => { if (result.success && Array.isArray(result.data)) setInboxEmails(result.data); })
+      .catch(() => setInboxEmails([]));
+    // Fetch sent
+    fetch(`http://localhost:3000/api/inbox/sent`, {
+      headers: {
+        ...(token ? { Authorization: `Bearer ${token}` } : {})
+      }
+    })
+      .then(res => res.ok ? res.json() : Promise.reject(res))
+      .then(result => { if (result.success && Array.isArray(result.data)) setSentEmails(result.data); })
+      .catch(() => setSentEmails([]));
+    // Fetch spam
+    fetch(`http://localhost:3000/api/inbox/spam`, {
+      headers: {
+        ...(token ? { Authorization: `Bearer ${token}` } : {})
+      }
+    })
+      .then(res => res.ok ? res.json() : Promise.reject(res))
+      .then(result => { if (result.success && Array.isArray(result.data)) setSpamEmails(result.data); })
+      .catch(() => setSpamEmails([]));
+    // Fetch lecturers for compose dropdown (only lecturers for student's units)
+    if (userId) {
+      fetch(`http://localhost:3000/api/lecturers/students/${userId}/lecturers`, {
+        headers: {
+          ...(token ? { Authorization: `Bearer ${token}` } : {})
+        }
+      })
+        .then(res => res.ok ? res.json() : Promise.reject(res))
+        .then(result => { if (result.success && Array.isArray(result.data)) setLecturers(result.data); })
+        .catch(() => setLecturers([]));
+    }
+  }, [userId]);
 
   const getEmailsForTab = () => {
     if (activeTab === "inbox") return inboxEmails;
@@ -39,11 +98,18 @@ export const InboxLayout = () => {
       toast({ title: "Missing fields", description: "Please fill in all fields.", variant: "destructive" });
       return;
     }
-    toast({ title: "Email sent!", description: `Message sent to ${mockLecturers.find(l => l.id === composeTo)?.fullName || composeTo}` });
-    setComposing(false);
-    setComposeTo("");
-    setComposeSubject("");
-    setComposeBody("");
+    // Use the updated API util for sending
+    sendInboxEmail(composeTo, composeSubject, composeBody, composeBody, attachment ? [attachment] : undefined)
+      .then(result => {
+        if (result.success) {
+          toast({ title: "Email sent!", description: `Message sent to ${lecturers.find(l => l.id === composeTo)?.full_name || composeTo}` });
+          setComposing(false);
+          setComposeTo("");
+          setComposeSubject("");
+          setComposeBody("");
+          setAttachment(null);
+        }
+      });
   };
 
   if (selectedEmail) {
@@ -100,15 +166,29 @@ export const InboxLayout = () => {
             <Select value={composeTo} onValueChange={setComposeTo}>
               <SelectTrigger><SelectValue placeholder="Select recipient..." /></SelectTrigger>
               <SelectContent>
-                {mockLecturers.map((l) => (
-                  <SelectItem key={l.id} value={l.id}>{l.fullName} ({l.email})</SelectItem>
+                {lecturers.map((l: any) => (
+                  <SelectItem key={l.id} value={l.institutional_email || l.email}>{l.full_name || l.fullName} ({l.institutional_email || l.email})</SelectItem>
                 ))}
               </SelectContent>
             </Select>
             <Input value={composeSubject} onChange={(e) => setComposeSubject(e.target.value)} placeholder="Subject" />
             <Textarea value={composeBody} onChange={(e) => setComposeBody(e.target.value)} placeholder="Write your message..." className="min-h-[200px]" />
-            <div className="flex justify-between">
-              <Button variant="outline" size="sm"><Paperclip className="h-3.5 w-3.5 mr-1" /> Attach File</Button>
+            <div className="flex justify-between items-center gap-2">
+              <input
+                type="file"
+                ref={fileInputRef}
+                style={{ display: 'none' }}
+                onChange={e => setAttachment(e.target.files && e.target.files[0] ? e.target.files[0] : null)}
+              />
+              <Button
+                variant="outline"
+                size="sm"
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+              >
+                <Paperclip className="h-3.5 w-3.5 mr-1" /> Attach File
+              </Button>
+              {attachment && <span className="text-xs ml-2">{attachment.name}</span>}
               <Button onClick={sendEmail}><Send className="h-3.5 w-3.5 mr-1" /> Send</Button>
             </div>
           </CardContent>

@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { LecturerLoginForm } from "@/components/auth/LecturerLoginForm";
-import { LecturerSignupForm } from "@/components/auth/LecturerSignupForm";
+//import { LecturerSignupForm } from "@/components/auth/LecturerSignupForm";
 import { GraduationCap, ArrowLeft } from "lucide-react";
 
 export const LecturerAuthPage = () => {
@@ -29,14 +29,11 @@ export const LecturerAuthPage = () => {
             <Tabs value={tab} onValueChange={setTab}>
               <TabsList className="w-full">
                 <TabsTrigger value="login" className="flex-1">Sign In</TabsTrigger>
-                <TabsTrigger value="signup" className="flex-1">Sign Up</TabsTrigger>
               </TabsList>
               <TabsContent value="login" className="mt-4">
-                <LecturerLoginForm onSuccess={() => navigate("/lecturer")} />
+                <LecturerLoginForm onSuccess={() => navigate("/lecturer/dashboard")} />
               </TabsContent>
-              <TabsContent value="signup" className="mt-4">
-                <LecturerSignupForm onSuccess={() => navigate("/lecturer")} />
-              </TabsContent>
+              
             </Tabs>
           </CardContent>
         </Card>

@@ -1,10 +1,11 @@
+import React from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { getUnitById, getNotesByUnit, getAssignmentsByUnit, getMaterialsByUnit, getLecturerById } from "@/data/mockData";
+// Removed mockData imports. Will fetch from backend.
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, FileText, BookOpen, Library, Download, ExternalLink, Calendar, Video, Link2 } from "lucide-react";
+import { ArrowLeft, FileText, BookOpen, Library, Download, ExternalLink, Calendar, Video, Link2, ClipboardCheck } from "lucide-react";
 
 const typeIcons = { pdf: FileText, video: Video, link: Link2, article: BookOpen };
 
@@ -13,11 +14,78 @@ export const UnitDetails = () => {
   const navigate = useNavigate();
   if (!unitId) return null;
 
-  const unit = getUnitById(unitId);
-  const notes = getNotesByUnit(unitId);
-  const assignments = getAssignmentsByUnit(unitId);
-  const materials = getMaterialsByUnit(unitId);
-  const lecturer = unit ? getLecturerById(unit.lecturerId) : null;
+  const [unit, setUnit] = React.useState<any>(null);
+  const [notes, setNotes] = React.useState<any[]>([]);
+  const [assignments, setAssignments] = React.useState<any[]>([]);
+  const [materials, setMaterials] = React.useState<any[]>([]);
+  const [cats, setCats] = React.useState<any[]>([]);
+  const [lecturer, setLecturer] = React.useState<any>(null);
+
+  React.useEffect(() => {
+    if (!unitId) return;
+    const token = localStorage.getItem("token");
+    
+    // Fetch unit details
+    fetch(`http://localhost:3000/api/units/${unitId}`)
+      .then(res => res.json())
+      .then(result => {
+        if (result.success && result.data) {
+          setUnit(result.data);
+          // Fetch lecturer info only if lecturerId exists
+          if (result.data.lecturerId) {
+            fetch(`http://localhost:3000/api/users/${result.data.lecturerId}`)
+              .then(res => res.json())
+              .then(lecResult => {
+                if (lecResult.success && lecResult.data) setLecturer(lecResult.data);
+              })
+              .catch(err => console.error("Error fetching lecturer:", err));
+          }
+        }
+      })
+      .catch(err => console.error("Error fetching unit:", err));
+    
+    // Fetch ALL resources for this unit (no type filter)
+    console.log("[UnitDetails] Fetching resources for unitId:", unitId);
+    fetch(`http://localhost:3000/api/resources/units/${unitId}/resources`, {
+      headers: {
+        ...(token ? { Authorization: `Bearer ${token}` } : {})
+      }
+    })
+      .then(res => {
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        return res.json();
+      })
+      .then(result => {
+        console.log("[UnitDetails] API Response:", result);
+        if (result.success && result.data) {
+          console.log("[UnitDetails] Resources object:", result.data);
+          // Backend organized resources by type
+          const notesData = result.data.notes || [];
+          const assignmentsData = result.data.assignments || [];
+          const materialsData = result.data.materials || [];
+          const catsData = result.data.cats || [];
+          
+          console.log("[UnitDetails] Notes:", notesData.length);
+          console.log("[UnitDetails] Assignments:", assignmentsData.length);
+          console.log("[UnitDetails] Materials:", materialsData.length);
+          console.log("[UnitDetails] CATs:", catsData.length);
+          
+          setNotes(notesData);
+          setAssignments(assignmentsData);
+          setMaterials(materialsData);
+          setCats(catsData);
+        } else {
+          console.warn("[UnitDetails] Unexpected response format:", result);
+        }
+      })
+      .catch(err => {
+        console.error("[UnitDetails] Error fetching resources:", err);
+        setNotes([]);
+        setAssignments([]);
+        setMaterials([]);
+        setCats([]);
+      });
+  }, [unitId]);
 
   if (!unit) return <p className="p-6 text-muted-foreground">Unit not found.</p>;
 
@@ -38,6 +106,7 @@ export const UnitDetails = () => {
           <TabsTrigger value="notes" className="gap-1"><FileText className="h-3.5 w-3.5" /> Notes</TabsTrigger>
           <TabsTrigger value="assignments" className="gap-1"><BookOpen className="h-3.5 w-3.5" /> Assignments</TabsTrigger>
           <TabsTrigger value="materials" className="gap-1"><Library className="h-3.5 w-3.5" /> Materials</TabsTrigger>
+          <TabsTrigger value="cats" className="gap-1"><ClipboardCheck className="h-3.5 w-3.5" /> CATs</TabsTrigger>
         </TabsList>
 
         <TabsContent value="notes" className="space-y-3 mt-4">
@@ -53,7 +122,30 @@ export const UnitDetails = () => {
                     <Calendar className="h-3 w-3" /> {new Date(note.uploadedAt).toLocaleDateString()}
                   </p>
                 </div>
-                <Button variant="outline" size="sm"><Download className="h-3.5 w-3.5 mr-1" /> Download</Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    if (note.file_path) {
+                      // Remove leading slashes from file_path to avoid double slashes
+                      let cleanPath = note.file_path;
+                      if (cleanPath.startsWith('/')) cleanPath = cleanPath.slice(1);
+                      // If file_path already contains 'uploads/', avoid duplicating
+                      if (cleanPath.startsWith('uploads/')) {
+                        cleanPath = cleanPath.replace(/^uploads\//, '');
+                      }
+                      const url = `http://localhost:3000/uploads/${cleanPath}`;
+                      const link = document.createElement('a');
+                      link.href = url;
+                      link.download = note.title || 'note';
+                      document.body.appendChild(link);
+                      link.click();
+                      document.body.removeChild(link);
+                    }
+                  }}
+                >
+                  <Download className="h-3.5 w-3.5 mr-1" /> Download
+                </Button>
               </CardContent>
             </Card>
           ))}
@@ -111,7 +203,33 @@ export const UnitDetails = () => {
             );
           })}
         </TabsContent>
-      </Tabs>
+        <TabsContent value="cats" className="space-y-3 mt-4">
+          {cats.length === 0 ? (
+            <p className="text-sm text-muted-foreground text-center py-8">No CATs uploaded yet.</p>
+          ) : cats.map((cat) => {
+            const catMetadata = cat.metadata || {};
+            const duration = catMetadata.cat_duration_minutes || 'Not specified';
+            const isTimed = catMetadata.is_timed || false;
+            return (
+              <Card key={cat.id}>
+                <CardContent className="p-4">
+                  <div className="flex items-start justify-between">
+                    <div className="space-y-1">
+                      <p className="font-medium text-sm">{cat.title}</p>
+                      <div className="flex gap-2 mt-2">
+                        {isTimed && <Badge variant="secondary" className="text-xs">Timed: {duration} min</Badge>}
+                        <Badge variant="outline" className="text-xs">{new Date(cat.created_at).toLocaleDateString()}</Badge>
+                      </div>
+                    </div>
+                    <Button size="sm" onClick={() => navigate(`/student/workspace?catId=${cat.id}`)}>  
+                      Take Assessment
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })}
+        </TabsContent>      </Tabs>
     </div>
   );
 };

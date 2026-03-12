@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Bell } from "lucide-react";
+import React, { useState } from "react";
+import { Bell, AlertCircle } from "lucide-react";
 import { Notification } from "@/data/mockData";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -7,7 +7,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { FileText, BookOpen, GraduationCap, Mail } from "lucide-react";
 
-const iconMap = {
+const iconMap: Record<string, any> = {
   note: FileText,
   assignment: BookOpen,
   grade: GraduationCap,
@@ -16,11 +16,17 @@ const iconMap = {
 
 export const NotificationBell = ({ notifications }: { notifications: Notification[] }) => {
   const [items, setItems] = useState(notifications);
+  React.useEffect(() => {
+    setItems(notifications);
+    console.log("[NotificationBell] notifications prop:", notifications);
+  }, [notifications]);
   const unreadCount = items.filter((n) => !n.read).length;
 
   const markRead = (id: string) => {
     setItems((prev) => prev.map((n) => (n.id === id ? { ...n, read: true } : n)));
   };
+
+  console.log("[NotificationBell] items state:", items);
 
   return (
     <Popover>
@@ -43,7 +49,7 @@ export const NotificationBell = ({ notifications }: { notifications: Notificatio
             <p className="p-4 text-sm text-muted-foreground text-center">No notifications</p>
           ) : (
             items.map((n) => {
-              const Icon = iconMap[n.type];
+              const Icon = iconMap[n.type] || AlertCircle;
               return (
                 <button
                   key={n.id}

@@ -1,0 +1,13 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "Test student and resource endpoints",
+			"type": "shell",
+			"command": "npm run dev & sleep 5 && curl -i -X GET http://localhost:3000/api/student/students/1/units && curl -i -X GET http://localhost:3000/api/resources/units/1/resources",
+			"isBackground": false,
+			"problemMatcher": [],
+			"group": "test"
+		}
+	]
+}

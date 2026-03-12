@@ -392,3 +392,23 @@ CREATE POLICY "Students read own notifications"
 CREATE POLICY "Students update own notifications (e.g. mark read)"
   ON notifications FOR UPDATE
   USING (student_id = (auth.jwt() ->> 'student_id')::uuid);
+-- =============================================================================
+-- MIGRATION 011: Add message deletion tracking columns
+-- =============================================================================
+
+-- Add deletion columns to chat_messages for tracking delete-for-you vs delete-for-everyone
+ALTER TABLE chat_messages
+ADD COLUMN deleted_for_sender BOOLEAN DEFAULT false,
+ADD COLUMN deleted_for_recipient BOOLEAN DEFAULT false;
+
+-- Create index for efficient filtering of active messages
+CREATE INDEX idx_chat_messages_active ON chat_messages(
+  sender_id,
+  recipient_id,
+  deleted_for_sender,
+  deleted_for_recipient
+);
+
+-- Add comments for clarity
+COMMENT ON COLUMN chat_messages.deleted_for_sender IS 'True if message is deleted for sender only (they deleted for themselves)';
+COMMENT ON COLUMN chat_messages.deleted_for_recipient IS 'True if message is deleted for both parties (sender deleted for everyone)';

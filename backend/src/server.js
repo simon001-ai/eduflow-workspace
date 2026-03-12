@@ -1,11 +1,17 @@
 import './config/env.js';
 import { supabase } from './config/supabaseClient.js';
 import app from './app.js';
+import http from 'http';
+import { initSocket } from './socket.js';
 import { env } from './config/env.js';
 
-const PORT = env.port;
 
-app.listen(PORT, () => {
+const PORT = env.port;
+const server = http.createServer(app);
+// Initialize Socket.io
+initSocket(server);
+
+server.listen(PORT, () => {
   console.log(`Server running at http://localhost:${PORT}`);
   console.log(`Health: http://localhost:${PORT}/health`);
   if (supabase) {

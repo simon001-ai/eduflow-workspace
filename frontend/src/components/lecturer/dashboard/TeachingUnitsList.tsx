@@ -1,5 +1,6 @@
+import React from "react";
 import { useAuth } from "@/context/AuthContext";
-import { mockUnits } from "@/data/mockData";
+// Removed mockData import. Will fetch units from backend.
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { BookOpen, ChevronRight } from "lucide-react";
@@ -10,7 +11,24 @@ export const TeachingUnitsList = () => {
   const navigate = useNavigate();
   if (!lecturer) return null;
 
-  const units = mockUnits.filter((u) => lecturer.teachingUnits.includes(u.id));
+  // Fetch units from backend API
+  const [units, setUnits] = React.useState([]);
+  React.useEffect(() => {
+    if (!lecturer) return;
+    const token = localStorage.getItem("token");
+    fetch("http://localhost:3000/api/lecturers/units", {
+      headers: {
+        ...(token ? { Authorization: `Bearer ${token}` } : {})
+      }
+    })
+      .then(res => res.json())
+      .then(result => {
+        // Backend returns { success, units }
+        if (result.success && Array.isArray(result.units)) {
+          setUnits(result.units);
+        }
+      });
+  }, [lecturer]);
 
   return (
     <div className="space-y-3">
@@ -18,19 +36,18 @@ export const TeachingUnitsList = () => {
         <BookOpen className="h-5 w-5 text-primary" /> My Teaching Units
       </h2>
       <div className="grid gap-3 sm:grid-cols-2">
-        {units.map((unit) => (
-          <Card key={unit.id} className="cursor-pointer hover:shadow-md hover:border-primary/30 transition-all group"
-            onClick={() => navigate(`/lecturer/resources/${unit.id}`)}>
-            <CardContent className="p-4 flex items-center justify-between">
-              <div className="space-y-1">
-                <Badge variant="secondary" className="text-xs font-mono">{unit.code}</Badge>
-                <p className="font-medium text-sm">{unit.name}</p>
-                <p className="text-xs text-muted-foreground">{unit.semester}</p>
-              </div>
-              <ChevronRight className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
-            </CardContent>
-          </Card>
-        ))}
+        {units.length === 0 ? (
+          <div className="text-muted-foreground text-sm">No teaching units found.</div>
+        ) : (
+          units.map((unit: any, idx: number) => (
+            <Card key={unit.id || (unit.code + unit.name + idx)} className="cursor-pointer hover:shadow-md hover:border-primary/30 transition-all group" onClick={() => navigate(`/lecturer/resources/${unit.id}`)}>
+              <CardContent className="flex flex-col gap-2 p-4">
+                <span className="text-xs font-mono text-muted-foreground">{unit.code}</span>
+                <span className="font-medium text-sm">{unit.name}</span>
+              </CardContent>
+            </Card>
+          ))
+        )}
       </div>
     </div>
   );
