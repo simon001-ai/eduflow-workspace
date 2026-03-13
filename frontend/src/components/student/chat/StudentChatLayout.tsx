@@ -408,9 +408,9 @@ export const StudentChatLayout = () => {
                     {msg.message_type === "text" ? (
                       <p className="text-sm">{msg.content}</p>
                     ) : msg.message_type === "image" ? (
-                      <img src={`http://localhost:3000/uploads/${msg.file_path}`} alt="Chat image" className="max-w-xs rounded" />
+                      <img src={`http://localhost:3000${msg.file_path?.startsWith('/uploads/') ? msg.file_path : `/uploads/${msg.file_path}`}`} alt="Chat image" className="max-w-xs rounded" />
                     ) : (
-                      <a href={`http://localhost:3000/uploads/${msg.file_path}`} className="text-sm underline flex items-center gap-1">
+                      <a href={`http://localhost:3000${msg.file_path?.startsWith('/uploads/') ? msg.file_path : `/uploads/${msg.file_path}`}`} className="text-sm underline flex items-center gap-1">
                         <FileIcon className="h-3 w-3" /> {msg.file_name}
                       </a>
                     )}

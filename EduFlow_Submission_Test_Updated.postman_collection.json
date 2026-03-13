@@ -1,0 +1,219 @@
+{
+  "info": {
+    "_postman_id": "eduflow-submission-test-updated",
+    "name": "EduFlow Connect - Submission & Flagged Sections Testing",
+    "description": "Complete flow testing with flagged sections display",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "1. Student Login",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"admission_number\": \"j77-3860-2023\",\n  \"password\": \"123456\"\n}"
+        },
+        "url": {
+          "raw": "http://localhost:3000/api/auth/student/login",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "3000",
+          "path": ["api", "auth", "student", "login"]
+        },
+        "description": "Login as student to get JWT token"
+      },
+      "response": []
+    },
+    {
+      "name": "2. Upload & Analyze Document",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{student_token}}",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "formdata",
+          "formdata": [
+            {
+              "key": "file",
+              "type": "file",
+              "src": ""
+            },
+            {
+              "key": "resource_id",
+              "value": "66666666-6666-6666-6666-666666666666",
+              "type": "text"
+            },
+            {
+              "key": "student_id",
+              "value": "820fa2d2-1cf2-42f3-ac6a-27a4418f9f95",
+              "type": "text"
+            }
+          ]
+        },
+        "url": {
+          "raw": "http://localhost:3000/api/plagiarism/analyze",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "3000",
+          "path": ["api", "plagiarism", "analyze"]
+        },
+        "description": "Upload PDF and analyze for plagiarism & AI content"
+      },
+      "response": []
+    },
+    {
+      "name": "3. Poll Analysis Results (Check Flagged Sections)",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{student_token}}",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "http://localhost:3000/api/plagiarism/analyze/result/{{submission_id}}",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "3000",
+          "path": ["api", "plagiarism", "analyze", "result", "{{submission_id}}"]
+        },
+        "description": "Poll for analysis results - includes flagged sections, AI detection, and plagiarism details"
+      },
+      "response": []
+    },
+    {
+      "name": "4. Submit Document to Lecturer",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{student_token}}",
+            "type": "text"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"submission_id\": \"{{submission_id}}\",\n  \"resource_id\": \"66666666-6666-6666-6666-666666666666\",\n  \"student_id\": \"820fa2d2-1cf2-42f3-ac6a-27a4418f9f95\"\n}"
+        },
+        "url": {
+          "raw": "http://localhost:3000/api/submissions/submit",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "3000",
+          "path": ["api", "submissions", "submit"]
+        },
+        "description": "Submit analyzed document to lecturer"
+      },
+      "response": []
+    },
+    {
+      "name": "5. Lecturer Login",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"staff_number\": \"001\",\n  \"password\": \"098765\"\n}"
+        },
+        "url": {
+          "raw": "http://localhost:3000/api/auth/lecturer/login",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "3000",
+          "path": ["api", "auth", "lecturer", "login"]
+        },
+        "description": "Login as lecturer to get JWT token"
+      },
+      "response": []
+    },
+    {
+      "name": "6. Lecturer View Submissions",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{lecturer_token}}",
+            "type": "text"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "http://localhost:3000/api/lecturers/submissions",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "3000",
+          "path": ["api", "lecturers", "submissions"]
+        },
+        "description": "Lecturer gets all submissions for their units"
+      },
+      "response": []
+    },
+    {
+      "name": "7. Get Submission Details (with Flagged Sections)",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{student_token}}",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "http://localhost:3000/api/submissions/{{submission_id}}",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "3000",
+          "path": ["api", "submissions", "{{submission_id}}"]
+        },
+        "description": "Get detailed submission information including flagged sections and recommendations"
+      },
+      "response": []
+    }
+  ],
+  "variable": [
+    {
+      "key": "student_token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "submission_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "lecturer_token",
+      "value": "",
+      "type": "string"
+    }
+  ]
+}

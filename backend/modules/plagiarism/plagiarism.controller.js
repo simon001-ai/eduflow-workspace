@@ -46,19 +46,100 @@ export async function getAnalysisResultController(req, res, next) {
     try {
         const { scanId } = req.params;
         const supabase = getSupabase();
+
         // Fetch submission
         const { data: submission, error: submissionErr } = await supabase.from('submissions').select('*').eq('id', scanId).maybeSingle();
         if (submissionErr || !submission) {
             return res.status(404).json({ success: false, message: 'Submission not found' });
         }
-        // Fetch plagiarism reports
-        const { data: reports, error: reportsErr } = await supabase.from('plagiarism_analysis').select('*').eq('submission_id', scanId);
+
+        // Fetch AI detection report with sentence-level analysis
+        const { data: aiReport, error: aiErr } = await supabase
+            .from('ai_detection_reports')
+            .select('ai_probability, human_probability, sentence_level_analysis')
+            .eq('submission_id', scanId)
+            .maybeSingle();
+
+        // Fetch plagiarism reports with matching segments
+        const { data: plagiarismReports, error: reportsErr } = await supabase
+            .from('plagiarism_analysis')
+            .select('similarity_score, matching_segments')
+            .eq('submission_id', scanId);
+
         if (reportsErr) {
-            return res.status(500).json({ success: false, message: 'Error fetching plagiarism reports', error: reportsErr.message });
+            console.warn('Error fetching plagiarism reports:', reportsErr.message);
         }
-        // Fetch AI detection report
-        const { data: aiReport, error: aiErr } = await supabase.from('ai_detection_reports').select('*').eq('submission_id', scanId).maybeSingle();
-        // Build response with ai_score and plagiarism_percentage
+
+        // Extract flagged sections from AI detection report
+        let aiFlaggedSections = [];
+        if (aiReport?.sentence_level_analysis) {
+            try {
+                const sentences = Array.isArray(aiReport.sentence_level_analysis)
+                    ? aiReport.sentence_level_analysis
+                    : JSON.parse(aiReport.sentence_level_analysis);
+
+                aiFlaggedSections = sentences
+                    .filter(sentence => sentence.ai_probability > 70) // Flag sentences with >70% AI probability
+                    .map(sentence => ({
+                        type: 'ai_detected',
+                        text: sentence.text,
+                        ai_probability: sentence.ai_probability,
+                        human_probability: sentence.human_probability
+                    }));
+            } catch (parseErr) {
+                console.warn('Error parsing AI sentence analysis:', parseErr.message);
+            }
+        }
+
+        // Extract flagged sections from plagiarism reports
+        let plagiarismFlaggedSections = [];
+        if (plagiarismReports && plagiarismReports.length > 0) {
+            plagiarismFlaggedSections = plagiarismReports
+                .filter(report => report.similarity_score > 15) // Only include high similarity matches
+                .map(report => {
+                    try {
+                        const segments = Array.isArray(report.matching_segments)
+                            ? report.matching_segments
+                            : JSON.parse(report.matching_segments || '[]');
+
+                        return segments
+                            .filter(segment => segment.similarity > 15)
+                            .map(segment => ({
+                                type: 'plagiarism',
+                                text: segment.text || segment.matching_text,
+                                similarity: segment.similarity || report.similarity_score,
+                                source: 'Previous submission'
+                            }));
+                    } catch (parseErr) {
+                        console.warn('Error parsing plagiarism matching segments:', parseErr.message);
+                        return [];
+                    }
+                })
+                .flat();
+        }
+
+        // Combine all flagged sections
+        const allFlaggedSections = [...aiFlaggedSections, ...plagiarismFlaggedSections];
+
+        // Generate recommendations based on results
+        const recommendations = [];
+        const plagiarismScore = submission.plagiarism_percentage || 0;
+        const aiScore = aiReport?.ai_probability || 0;
+
+        if (plagiarismScore > 15) {
+            recommendations.push('Consider rephrasing sections with high similarity to avoid plagiarism concerns.');
+        }
+        if (aiScore > 50) {
+            recommendations.push('Review AI-generated content and ensure it aligns with your institution\'s policies.');
+        }
+        if (allFlaggedSections.length > 0) {
+            recommendations.push('Review the flagged sections below and consider making revisions.');
+        }
+        if (recommendations.length === 0) {
+            recommendations.push('Your submission appears to meet academic integrity standards.');
+        }
+
+        // Build response with detailed flagged sections
         res.json({
             success: true,
             submission_id: scanId,
@@ -66,11 +147,11 @@ export async function getAnalysisResultController(req, res, next) {
             ai_probability: aiReport?.ai_probability || null,
             human_probability: aiReport?.human_probability || null,
             plagiarism_percentage: submission.plagiarism_percentage || 0,
+            matches: allFlaggedSections, // Flagged sections for display
+            recommendations: recommendations, // Actionable recommendations
             file_url: submission.file_url,
             extracted_text: submission.extracted_text,
             status: submission.status,
-            ai_detection_report: aiReport || null,
-            plagiarism_reports: reports || [],
             message: 'Analysis result fetched successfully'
         });
     } catch (e) {

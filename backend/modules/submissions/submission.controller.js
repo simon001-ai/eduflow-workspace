@@ -39,13 +39,106 @@ export async function getSubmissionDetails(req, res, next) {
 			.maybeSingle();
 		
 		if (resError) throw resError;
+
+		// Fetch AI detection report with sentence-level analysis
+		const { data: aiReport, error: aiErr } = await supabase
+			.from('ai_detection_reports')
+			.select('ai_probability, human_probability, sentence_level_analysis')
+			.eq('submission_id', id)
+			.maybeSingle();
 		
+		if (aiErr) console.warn('Error fetching AI report:', aiErr);
+
+		// Fetch plagiarism reports with matching segments
+		const { data: plagiarismReports, error: reportsErr } = await supabase
+			.from('plagiarism_analysis')
+			.select('similarity_score, matching_segments')
+			.eq('submission_id', id);
+
+		if (reportsErr) console.warn('Error fetching plagiarism reports:', reportsErr);
+
+		// Extract flagged sections from AI detection report
+		let aiFlaggedSections = [];
+		if (aiReport?.sentence_level_analysis) {
+			try {
+				const sentences = Array.isArray(aiReport.sentence_level_analysis)
+					? aiReport.sentence_level_analysis
+					: JSON.parse(aiReport.sentence_level_analysis);
+
+				aiFlaggedSections = sentences
+					.filter(sentence => sentence.ai_probability > 70) // Flag sentences with >70% AI probability
+					.map(sentence => ({
+						type: 'ai_detected',
+						text: sentence.text,
+						ai_probability: sentence.ai_probability,
+						human_probability: sentence.human_probability
+					}));
+			} catch (parseErr) {
+				console.warn('Error parsing AI sentence analysis:', parseErr.message);
+			}
+		}
+
+		// Extract flagged sections from plagiarism reports
+		let plagiarismFlaggedSections = [];
+		if (plagiarismReports && plagiarismReports.length > 0) {
+			plagiarismFlaggedSections = plagiarismReports
+				.filter(report => report.similarity_score > 15) // Only include high similarity matches
+				.map(report => {
+					try {
+						const segments = Array.isArray(report.matching_segments)
+							? report.matching_segments
+							: JSON.parse(report.matching_segments || '[]');
+
+						return segments
+							.filter(segment => segment.similarity > 15)
+							.map(segment => ({
+								type: 'plagiarism',
+								text: segment.text || segment.matching_text,
+								similarity: segment.similarity || report.similarity_score,
+								source: 'Previous submission'
+							}));
+					} catch (parseErr) {
+						console.warn('Error parsing plagiarism matching segments:', parseErr.message);
+						return [];
+					}
+				})
+				.flat();
+		}
+
+		// Combine all flagged sections
+		const allFlaggedSections = [...aiFlaggedSections, ...plagiarismFlaggedSections];
+
+		// Generate recommendations based on results
+		const recommendations = [];
+		const plagiarismScore = submission.plagiarism_percentage || 0;
+		const aiScore = aiReport?.ai_probability || 0;
+
+		if (plagiarismScore > 15) {
+			recommendations.push('Consider rephrasing sections with high similarity to avoid plagiarism concerns.');
+		}
+		if (aiScore > 50) {
+			recommendations.push('Review AI-generated content and ensure it aligns with your institution\'s policies.');
+		}
+		if (allFlaggedSections.length > 0) {
+			recommendations.push('Review the flagged sections below and consider making revisions.');
+		}
+		if (recommendations.length === 0) {
+			recommendations.push('Your submission appears to meet academic integrity standards.');
+		}
+
 		res.json({ 
 			success: true, 
 			data: {
 				...submission,
 				resource_title: resource?.title || 'Unknown',
-				resource_type: resource?.type || 'unknown'
+				resource_type: resource?.type || 'unknown',
+				ai_report: aiReport ? {
+					ai_probability: aiReport.ai_probability,
+					human_probability: aiReport.human_probability,
+					sentences: aiReport.sentence_level_analysis || []
+				} : null,
+				flagged_sections: allFlaggedSections, // Add flagged sections to response
+				recommendations: recommendations // Add recommendations to response
 			}
 		});
 	} catch (e) {
@@ -324,6 +417,54 @@ export async function submitAssignment(req, res, next) {
 		}
 
 		return res.status(201).json({ success: true, data: submission });
+	} catch (err) {
+		next(err);
+	}
+}
+
+/**
+ * Cancel a submission (for redo option)
+ * Allows canceling from: draft, analyzed, analyzing states
+ */
+export async function cancelSubmission(req, res, next) {
+	try {
+		const studentId = req.user.student_id;
+		const { submissionId } = req.params;
+		const supabase = getSupabase();
+
+		// Verify submission belongs to student
+		const { data: submission, error: fetchErr } = await supabase
+			.from('submissions')
+			.select('id, student_id, status')
+			.eq('id', submissionId)
+			.maybeSingle();
+
+		if (fetchErr || !submission) {
+			return res.status(404).json({ success: false, message: 'Submission not found' });
+		}
+
+		if (submission.student_id !== studentId) {
+			return res.status(403).json({ success: false, message: 'Unauthorized' });
+		}
+
+		// Allow canceling from draft, analyzed, or analyzing states
+		const allowedStatuses = ['draft', 'analyzed', 'analyzing'];
+		if (!allowedStatuses.includes(submission.status)) {
+			return res.status(400).json({ 
+				success: false, 
+				message: `Cannot cancel submission with status: ${submission.status}` 
+			});
+		}
+
+		// Delete the submission
+		const { error: deleteErr } = await supabase
+			.from('submissions')
+			.delete()
+			.eq('id', submissionId);
+
+		if (deleteErr) throw deleteErr;
+
+		res.json({ success: true, message: 'Submission cancelled successfully' });
 	} catch (err) {
 		next(err);
 	}

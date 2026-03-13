@@ -20,6 +20,9 @@ router.post('/:id/grade', authMiddleware, roleMiddleware('lecturer'), submission
 // Get submission details (for viewing)
 router.get('/:id', authMiddleware, submissionController.getSubmissionDetails);
 
+// Cancel analyzing submission (for redo)
+router.delete('/:submissionId/cancel', authMiddleware, roleMiddleware('student'), submissionController.cancelSubmission);
+
 // Detailed plagiarism report
 router.get('/:id/plagiarism-report', authMiddleware, submissionController.getPlagiarismReport);
 

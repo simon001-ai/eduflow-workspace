@@ -552,7 +552,7 @@ export const UploadDocument = () => {
           )}
 
           {/* Flagged Sections */}
-          {result.matches && result.matches.length > 0 && result.plagiarism_percentage > 15 && (
+          {result.matches && result.matches.length > 0 && (
             <Card>
               <CardHeader className="pb-3">
                 <CardTitle className="text-base flex items-center gap-2">
@@ -560,22 +560,37 @@ export const UploadDocument = () => {
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
-                {result.matches.slice(0, 3).map((match, i) => (
+                {result.matches.slice(0, 5).map((match, i) => (
                   <div key={i} className="p-3 rounded-lg bg-destructive/5 border border-destructive/20">
-                    <p className="text-sm italic text-foreground mb-2">"{match.text || 'Section'}"</p>
-                    {match.source && (
+                    <div className="flex items-start justify-between mb-2">
+                      <p className="text-sm italic text-foreground flex-1">"{match.text || 'Section'}"</p>
+                      <Badge variant="outline" className="text-xs ml-2 shrink-0">
+                        {match.type === 'ai_detected' ? 'AI Detected' : 'Plagiarism'}
+                      </Badge>
+                    </div>
+                    {match.type === 'ai_detected' ? (
                       <p className="text-xs text-muted-foreground">
-                        Source: <span className="font-medium">{match.source}</span>
+                        AI Probability: <span className="font-medium">{match.ai_probability}%</span>
                       </p>
-                    )}
-                    {match.similarity && (
-                      <Badge variant="outline" className="text-xs mt-1">{match.similarity}% match</Badge>
+                    ) : (
+                      <>
+                        {match.source && (
+                          <p className="text-xs text-muted-foreground">
+                            Source: <span className="font-medium">{match.source}</span>
+                          </p>
+                        )}
+                        {match.similarity && (
+                          <p className="text-xs text-muted-foreground">
+                            Similarity: <span className="font-medium">{match.similarity}%</span>
+                          </p>
+                        )}
+                      </>
                     )}
                   </div>
                 ))}
-                {result.matches.length > 3 && (
+                {result.matches.length > 5 && (
                   <p className="text-xs text-muted-foreground text-center">
-                    ... and {result.matches.length - 3} more flagged sections
+                    ... and {result.matches.length - 5} more flagged sections
                   </p>
                 )}
               </CardContent>
